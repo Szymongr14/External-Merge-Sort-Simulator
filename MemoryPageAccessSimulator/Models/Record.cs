@@ -1,9 +1,9 @@
-namespace ExternalMergeSortSimulator.Models;
+namespace MemoryPageAccessSimulator.Models;
 
 public record Record
 {
-    public double X { get; }
-    public double Y { get; }
+    public double X { get; init; }
+    public double Y { get; init; }
     public double Key { get; private set; }
     
     public Record(double x, double y)

@@ -1,5 +1,7 @@
-﻿using ExternalMergeSortSimulator.Models;
+﻿using ExternalMergeSortSimulator.Factories;
+using ExternalMergeSortSimulator.Interfaces;
 using ExternalMergeSortSimulator.Validators;
+using MemoryPageAccessSimulator.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,26 +18,40 @@ public abstract class Program
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
             .Build();
         
+        // Bind and validate configuration file
+        var configurationModel = new AppSettings();
+        configuration.GetSection("Settings").Bind(configurationModel);
+
         // Set up DI container
         var services = new ServiceCollection();
-        ConfigureServices(services);
+        ConfigureServices(services, configurationModel);
         var serviceProvider = services.BuildServiceProvider();
         
         // Get logger instance from DI
         var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-        
-        // Validate configuration file
-        var configurationModel = new AppSettings();
-        configuration.GetSection("Settings").Bind(configurationModel);
         ValidateAppSettings(configurationModel, logger);
-        services.AddSingleton(configuration);
         
         logger.LogInformation("Application started successfully.");
+        
+        // Start the application
+        var externalMergeSortService = serviceProvider.GetRequiredService<ExternalMergeSortUsingLargeBuffersService>();
+        externalMergeSortService.Start();
     }
-
-    private static void ConfigureServices(ServiceCollection services)
+    
+    private static void ConfigureServices(ServiceCollection services, AppSettings configurationModel)
     {
+        services.AddSingleton(configurationModel);
+        
         services.AddLogging(configure => configure.AddConsole());
+        services.AddSingleton<IDatasetInputStrategyFactory, DatasetInputStrategyFactory>();
+        
+        services.AddTransient(serviceProvider =>
+        {
+            var factory = serviceProvider.GetRequiredService<IDatasetInputStrategyFactory>();
+            return factory.Create();
+        });
+        
+        services.AddTransient<ExternalMergeSortUsingLargeBuffersService>();
     }
 
     private static void ValidateAppSettings(AppSettings settings, ILogger logger)

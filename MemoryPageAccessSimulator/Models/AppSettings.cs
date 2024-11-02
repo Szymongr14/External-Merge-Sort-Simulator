@@ -1,4 +1,4 @@
-namespace ExternalMergeSortSimulator.Models;
+namespace MemoryPageAccessSimulator.Models;
 
 public class AppSettings
 {

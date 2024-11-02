@@ -1,4 +1,4 @@
-using ExternalMergeSortSimulator.Models;
+using MemoryPageAccessSimulator.Models;
 
 namespace ExternalMergeSortSimulator.Validators;
 

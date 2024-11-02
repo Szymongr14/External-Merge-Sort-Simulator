@@ -1,4 +1,4 @@
-namespace ExternalMergeSortSimulator;
+namespace ExternalMergeSortSimulator.Enums;
 
 public enum RecordsInputMethod
 {
