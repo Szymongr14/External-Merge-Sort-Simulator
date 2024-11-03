@@ -1,4 +1,5 @@
 using ExternalMergeSortSimulator.Interfaces;
+using MemoryPageAccessSimulator.Interfaces;
 using MemoryPageAccessSimulator.Models;
 
 namespace ExternalMergeSortSimulator;
@@ -7,20 +8,21 @@ public class ExternalMergeSortUsingLargeBuffersService
 {
     private readonly IDatasetInputStrategy _datasetInputStrategy;
     private readonly AppSettings _appSettings;
+    private readonly IDiskStorageService _diskStorageService;
 
-    public ExternalMergeSortUsingLargeBuffersService(AppSettings appSettings, IDatasetInputStrategy datasetInputStrategy)
+    public ExternalMergeSortUsingLargeBuffersService(AppSettings appSettings, IDatasetInputStrategy datasetInputStrategy, IDiskStorageService diskStorageService)
     {
         _appSettings = appSettings;
         _datasetInputStrategy = datasetInputStrategy;
+        _diskStorageService = diskStorageService;
     }
 
     public void Start()
     {
-        Console.WriteLine("hello");
         var records = _datasetInputStrategy.GetRecords();
-        foreach (var record in records)
-        {
-            Console.WriteLine($"X: {record.X}, Y: {record.Y}, KEY: {record.Key}");
-        }
+        _diskStorageService.WriteInitialRecordsToBinaryFile(records, "Disk/initial_records.bin");
+        Console.WriteLine("Saved to binary file.");
+        _diskStorageService.ReadInitialRecordsFromBinaryFile("Disk/initial_records.bin");
     }
 }
+    

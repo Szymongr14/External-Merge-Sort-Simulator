@@ -5,6 +5,7 @@ using MemoryPageAccessSimulator.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MemoryPageAccessSimulator;
 
 namespace ExternalMergeSortSimulator;
 
@@ -52,6 +53,7 @@ public abstract class Program
         });
         
         services.AddTransient<ExternalMergeSortUsingLargeBuffersService>();
+        services.AddMemoryPageAccessSimulatorDependencies();
     }
 
     private static void ValidateAppSettings(AppSettings settings, ILogger logger)

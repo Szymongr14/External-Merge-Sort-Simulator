@@ -12,6 +12,13 @@ public record Record
         Y = y;
         Key = CountDistanceToOrigin();
     }
+    
+    public Record(double x, double y, double key)
+    {
+        X = x;
+        Y = y;
+        Key = key;
+    }
 
     private float CountDistanceToOrigin() => (float)Math.Sqrt(X * X + Y * Y);
 }
