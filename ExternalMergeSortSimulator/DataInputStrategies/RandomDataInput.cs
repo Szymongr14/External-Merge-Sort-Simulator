@@ -1,5 +1,6 @@
 using ExternalMergeSortSimulator.Interfaces;
 using MemoryPageAccessSimulator.Models;
+using Microsoft.Extensions.Logging;
 
 namespace ExternalMergeSortSimulator.DataInputStrategies;
 
