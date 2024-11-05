@@ -168,6 +168,6 @@ public class MemoryManagerService : IMemoryManagerService
     public int GetMaxPageOffsetForFile(string filePath)
     {
         using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        return (int)fileStream.Length / PageSizeInBytes;
+        return (int)Math.Ceiling((double)fileStream.Length / PageSizeInBytes);
     }
 }

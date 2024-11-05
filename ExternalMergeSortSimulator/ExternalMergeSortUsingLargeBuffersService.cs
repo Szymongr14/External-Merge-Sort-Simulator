@@ -33,6 +33,8 @@ public class ExternalMergeSortUsingLargeBuffersService
         var offset = 0;
         var runCounter = 0;
         var maxOffsetForInitialFile = _memoryManagerService.GetMaxPageOffsetForFile(filePath);
+        
+        _logger.LogInformation("Initial Run Generation phase has started...");
 
         while (offset < maxOffsetForInitialFile)
         {
@@ -53,6 +55,8 @@ public class ExternalMergeSortUsingLargeBuffersService
 
             runCounter++;
         }
+        
+        _logger.LogInformation("Initial Run Generation phase has ended... {} runs was created and sorted!", runCounter);
     }
     
     private void SortRecordsInRAM()
