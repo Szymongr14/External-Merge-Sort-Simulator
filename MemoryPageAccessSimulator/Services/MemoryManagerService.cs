@@ -170,4 +170,9 @@ public class MemoryManagerService : IMemoryManagerService
         using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
         return (int)Math.Ceiling((double)fileStream.Length / PageSizeInBytes);
     }
+    
+    public (int totalReads, int totalWrites) GetTotalReadsAndWrites()
+    {
+        return (PageIOStatistics.TotalReads, PageIOStatistics.TotalWrites);
+    }
 }

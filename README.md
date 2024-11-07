@@ -17,7 +17,7 @@ Below is a list of available configuration options that you can specify in the `
     "DataSource": "LoadFromFile",
     "FilePath": "data/input.txt",
     "NumberOfRecordsToGenerate" : null,
-    "LogLevel": "Basic"
+    "LogLevel": "Detailed"
   }
 }
 ```
