@@ -19,4 +19,9 @@ public interface IMemoryManagerService
     public void RemoveLastPageFromRAM();
     public int GetMaxPageOffsetForFile(string filePath);
     public (int totalReads, int totalWrites) GetTotalReadsAndWrites();
+    public void RemoveFirstRecordFromGivenPage(int pageNumber);
+    public Record GetFirstRecordFromGivenPage(int pageNumber);
+    public void InsertPageIntoRAMAtGivenIndex(Page page, int index);
+    public void ClearRAMPages();
+    public void MoveRecordToPage(int pageNumber, Record record);
 }

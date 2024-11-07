@@ -93,6 +93,11 @@ public class MemoryManagerService : IMemoryManagerService
         _ram.Pages.Add(page);
     }
     
+    public void InsertPageIntoRAMAtGivenIndex(Page page, int index)
+    {
+        _ram.Pages.Insert(index, page);
+    }
+    
     public void RemovePageFromRAM(int pageNumber)
     {
         _ram.Pages.RemoveAt(pageNumber);
@@ -130,6 +135,16 @@ public class MemoryManagerService : IMemoryManagerService
         return records;
     }
     
+    public Record GetFirstRecordFromGivenPage(int pageNumber)
+    {
+        return _ram.Pages[pageNumber].Records.First();
+    }
+    
+    public void RemoveFirstRecordFromGivenPage(int pageNumber)
+    {
+        _ram.Pages[pageNumber].Records.RemoveFirst();
+    }
+    
     public void WriteRecordsToRAM(List<Record> records)
     {
         var pageNumber = 0;
@@ -160,7 +175,12 @@ public class MemoryManagerService : IMemoryManagerService
         }
     }
     
-    private void ClearRAMPages()
+    public void MoveRecordToPage(int pageNumber, Record record)
+    {
+        _ram.Pages[pageNumber].AddRecord(record);
+    }
+    
+    public void ClearRAMPages()
     {
         _ram.Pages.Clear();
     }

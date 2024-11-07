@@ -26,19 +26,39 @@ public class ExternalMergeSortUsingLargeBuffersService
     {
         var records = _datasetInputStrategy.GetRecords();
         _memoryManagerService.WriteInitialRecordsToBinaryFile(records, $"Disk/{InitialRecordsFile}");
-        CreateRuns($"Disk/{InitialRecordsFile}");
-        Merge("Disk");
+        var numberOfCreatedRuns = CreateRuns($"Disk/{InitialRecordsFile}");
+        Merge("Disk", numberOfCreatedRuns);
     }
 
-    private void Merge(string diskDir)
+    private void Merge(string diskDir, int numberOfInitialRuns)
     {
-        var mergeMinHeap = new PriorityQueue<HeapElement, int>();
+        var mergeMinHeap = new PriorityQueue<HeapElement, double>();
+        var outputCounter = 0;
         
-        var offsets = new int[_appSettings.RAMSizeInNumberOfPages];
-       
+        var currentOffsets = new int[_appSettings.RAMSizeInNumberOfPages];
+        var maxOffsets = new int[_appSettings.RAMSizeInNumberOfPages];
+        for (var i = 0; i < _appSettings.RAMSizeInNumberOfPages - 1; i++)
+        {
+            maxOffsets[i] = _memoryManagerService.GetMaxPageOffsetForFile($"{diskDir}/run_{i}.bin");
+            var page = _memoryManagerService.ReadPageFromTape($"{diskDir}/run_{i}.bin", 0);
+            _memoryManagerService.InsertPageIntoRAMAtGivenIndex(page!, i);
+            var firstRecord = _memoryManagerService.GetFirstRecordFromGivenPage(i);
+            _memoryManagerService.RemoveFirstRecordFromGivenPage(i);
+            mergeMinHeap.Enqueue(new HeapElement(firstRecord, i), firstRecord.Key);
+        }
+
+        var minValueOnHeap = mergeMinHeap.Dequeue();
+        _memoryManagerService.MoveRecordToPage(outputCounter, minValueOnHeap.Record);
+        var pageWithOutputRun = _memoryManagerService.GetPageFromRAM(_appSettings.RAMSizeInNumberOfPages - 1);
+        if(pageWithOutputRun.PageIsFull())
+        {
+            _memoryManagerService.WritePageToTape(pageWithOutputRun, $"{diskDir}/output_{outputCounter}.bin");
+        }
         
+        // TODO: check if page is empty, if yes fetch new page from tape
     }
-    private void CreateRuns(string filePath)
+    
+    private int CreateRuns(string filePath)
     {
         var initialRecordsFileOffset = 0;
         var runCounter = 0;
@@ -55,6 +75,8 @@ public class ExternalMergeSortUsingLargeBuffersService
         }
 
         LogSummary(runCounter);
+        _memoryManagerService.ClearRAMPages();
+        return runCounter;
     }
 
     private (int readPages, int newOffset) LoadPagesIntoRAM(string filePath, int offset)
