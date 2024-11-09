@@ -30,128 +30,95 @@ public class ExternalMergeSortUsingLargeBuffersService
         Merge("Disk", numberOfCreatedRuns);
     }
 
-    // private void Merge(string diskDir, int numberOfInitialRuns)
-    // {
-    //     var mergeMinHeap = new PriorityQueue<HeapElement, double>();
-    //     var outputCounter = 0;
-    //     
-    //     var currentOffsets = new int[_appSettings.RAMSizeInNumberOfPages];
-    //     var maxOffsets = new int[_appSettings.RAMSizeInNumberOfPages];
-    //     for (var i = 0; i < _appSettings.RAMSizeInNumberOfPages - 1; i++)
-    //     {
-    //         maxOffsets[i] = _memoryManagerService.GetMaxPageOffsetForFile($"{diskDir}/run_{i}.bin");
-    //         var page = _memoryManagerService.ReadPageFromTape($"{diskDir}/run_{i}.bin", 0);
-    //         _memoryManagerService.InsertPageIntoRAMAtGivenIndex(page!, i);
-    //         var firstRecord = _memoryManagerService.GetFirstRecordFromGivenPage(i);
-    //         _memoryManagerService.RemoveFirstRecordFromGivenPage(i);
-    //         mergeMinHeap.Enqueue(new HeapElement(firstRecord, i), firstRecord.Key);
-    //     }
-    //
-    //     var minValueOnHeap = mergeMinHeap.Dequeue();
-    //     _memoryManagerService.MoveRecordToPage(outputCounter, minValueOnHeap.Record);
-    //     var pageWithOutputRun = _memoryManagerService.GetPageFromRAM(_appSettings.RAMSizeInNumberOfPages - 1);
-    //     if(pageWithOutputRun.PageIsFull())
-    //     {
-    //         _memoryManagerService.WritePageToTape(pageWithOutputRun, $"{diskDir}/output_{outputCounter}.bin");
-    //     }
-    //     
-    //     // TODO: check if page is empty, if yes fetch new page from tape
-    // }
-    //
-    
-    private void Merge(string diskDir, int numberOfInitialRuns)
+    private void Merge(string diskDir, int numberOfRunsToSortInFirstPhase)
     {
-        int phaseCounter = 0;
+        var phaseCounter = 0;
+        var numberOfRunsToMergeInCurrentPhase = numberOfRunsToSortInFirstPhase;
 
-        while (numberOfInitialRuns > 1)
+        while (numberOfRunsToMergeInCurrentPhase > 1)
         {
+            var outputCounter = 0;
             var mergeMinHeap = new PriorityQueue<HeapElement, double>();
-            int activeRunCount = Math.Min(numberOfInitialRuns, _appSettings.RAMSizeInNumberOfPages - 1);
-            var currentOffsets = new int[activeRunCount];
-            var maxOffsets = new int[activeRunCount];
-            
-            // Current phase's output file path (only one file per phase)
-            var outputFilePath = $"{diskDir}/merged_output_phase_{phaseCounter}.bin";
-            
-            // Load first pages from the initial `n-1` runs into RAM and initialize the heap
-            for (int i = 0; i < activeRunCount; i++)
+
+            var numberOfRunsInRAM = Math.Min(numberOfRunsToMergeInCurrentPhase, _appSettings.RAMSizeInNumberOfPages - 1);
+
+            var currentOffsets = new int[numberOfRunsInRAM];
+            var maxOffsets = new int[numberOfRunsInRAM];
+
+            for (var runStartIndex = 0; runStartIndex < numberOfRunsToMergeInCurrentPhase; runStartIndex += numberOfRunsInRAM)
             {
-                LoadInitialPageIntoHeap($"{diskDir}/run_{i}.bin", i, mergeMinHeap);
-                currentOffsets[i] = 0;
-                maxOffsets[i] = _memoryManagerService.GetMaxPageOffsetForFile($"{diskDir}/run_{i}.bin");
-            }
-            _memoryManagerService.InsertPageIntoRAMAtGivenIndex(new Page(_appSettings.PageSizeInNumberOfRecords), _appSettings.RAMSizeInNumberOfPages - 1);
+                var outputFilePath = $"{diskDir}/phase_{phaseCounter + 1}_run_{outputCounter++}.bin";
 
-            _logger.LogInformation($"Starting merge phase {phaseCounter}...");
-
-            while (mergeMinHeap.Count > 0)
-            {
-                // 1. Dequeue the smallest element from the heap
-                var minElement = mergeMinHeap.Dequeue();
-                int sourceRunIndex = minElement.PageNumber;
-
-                // 2. Add the smallest element to the output page in RAM
-                _memoryManagerService.MoveRecordToPage(_appSettings.RAMSizeInNumberOfPages - 1, minElement.Record);
-                var outputPage = _memoryManagerService.GetPageFromRAM(_appSettings.RAMSizeInNumberOfPages - 1);
-
-                // 3. If output page is full, write it to the output file and update output offset
-                if (outputPage.PageIsFull())
+                for (var i = 0; i < numberOfRunsInRAM && (runStartIndex + i) < numberOfRunsToMergeInCurrentPhase; i++)
                 {
-                    _memoryManagerService.WritePageToTape(outputPage, outputFilePath);
-                    _memoryManagerService.ClearPage(_appSettings.RAMSizeInNumberOfPages - 1);  // Clear the output page for reuse
+                    var runIndex = runStartIndex + i;
+                    LoadInitialPageIntoHeap($"{diskDir}/phase_{phaseCounter}_run_{runIndex}.bin", i, mergeMinHeap);
+                    currentOffsets[i] = 0;
+                    maxOffsets[i] = _memoryManagerService.GetMaxPageOffsetForFile($"{diskDir}/phase_{phaseCounter}_run_{runIndex}.bin");
                 }
 
-                // 4. Check if there are more records on the current page in RAM (sourceRunIndex)
-                if (_memoryManagerService.PageIsEmpty(sourceRunIndex))
+                _memoryManagerService.InsertPageIntoRAMAtGivenIndex(new Page(_appSettings.PageSizeInNumberOfRecords), _appSettings.RAMSizeInNumberOfPages - 1);
+
+                while (mergeMinHeap.Count > 0)
                 {
-                    if (currentOffsets[sourceRunIndex] == maxOffsets[sourceRunIndex] - 1)
+                    var (record, pageNumberOfMinRecord) = mergeMinHeap.Dequeue();
+
+                    _memoryManagerService.MoveRecordToPage(_appSettings.RAMSizeInNumberOfPages - 1, record);
+                    var outputPage = _memoryManagerService.GetPageFromRAM(_appSettings.RAMSizeInNumberOfPages - 1);
+
+                    if (outputPage.PageIsFull())
                     {
-                        Console.WriteLine();
-                        continue;
+                        _memoryManagerService.WritePageToTape(outputPage, outputFilePath);
+                        _memoryManagerService.ClearPage(_appSettings.RAMSizeInNumberOfPages - 1);
                     }
-                    var nextPage = _memoryManagerService.ReadPageFromTape($"{diskDir}/run_{sourceRunIndex}.bin", ++currentOffsets[sourceRunIndex]);
-                    _memoryManagerService.InsertPageIntoRAMAtGivenIndex(nextPage!, sourceRunIndex);
+
+                    if (_memoryManagerService.PageIsEmpty(pageNumberOfMinRecord))
+                    {
+                        if (currentOffsets[pageNumberOfMinRecord] < maxOffsets[pageNumberOfMinRecord] - 1)
+                        {
+                            var nextPage = _memoryManagerService.ReadPageFromTape($"{diskDir}/phase_{phaseCounter}_run_{pageNumberOfMinRecord}.bin", ++currentOffsets[pageNumberOfMinRecord]);
+                            _memoryManagerService.InsertPageIntoRAMAtGivenIndex(nextPage!, pageNumberOfMinRecord);
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+
+                    var nextRecordFromPage = _memoryManagerService.GetFirstRecordFromGivenPage(pageNumberOfMinRecord);
+                    _memoryManagerService.RemoveFirstRecordFromGivenPage(pageNumberOfMinRecord);
+                    mergeMinHeap.Enqueue(new HeapElement(nextRecordFromPage, pageNumberOfMinRecord), nextRecordFromPage.Key);
                 }
 
-                var nextRecordFromPage = _memoryManagerService.GetFirstRecordFromGivenPage(sourceRunIndex);
-                _memoryManagerService.RemoveFirstRecordFromGivenPage(sourceRunIndex);
-                mergeMinHeap.Enqueue(new HeapElement(nextRecordFromPage, sourceRunIndex), nextRecordFromPage.Key);
+                var finalOutputPage = _memoryManagerService.GetPageFromRAM(_appSettings.RAMSizeInNumberOfPages - 1);
+                if (!finalOutputPage.IsEmpty())
+                {
+                    _memoryManagerService.WritePageToTape(finalOutputPage, outputFilePath);
+                }
             }
 
-            // Finalize the output file by writing any remaining data in the output page
-            var finalOutputPage = _memoryManagerService.GetPageFromRAM(_appSettings.RAMSizeInNumberOfPages - 1);
-            if (!finalOutputPage.IsEmpty())
+            for (var i = 0; i < numberOfRunsToMergeInCurrentPhase; i++)
             {
-                _memoryManagerService.WritePageToTape(finalOutputPage, outputFilePath);
+                var inputFilePath = $"{diskDir}/phase_{phaseCounter}_run_{i}.bin";
+                File.Delete(inputFilePath);
+                _logger.LogInformation($"Deleted temporary file: {inputFilePath}");
             }
 
-            // Prepare for the next phase, treating this phase's output file as a new single run
             phaseCounter++;
-            numberOfInitialRuns = 1; // Now we have a single output file, which we use in the next phase as input
+            numberOfRunsToMergeInCurrentPhase = outputCounter;
         }
 
-        _logger.LogInformation("Merge completed successfully.");
+        _logger.LogInformation("Merge completed successfully. Final sorted run is in the last output file.");
     }
+
     
     private void LoadInitialPageIntoHeap(string filePath, int runIndex, PriorityQueue<HeapElement, double> minHeap)
     {
-        // 1. Read the first page from the specified run file
         var page = _memoryManagerService.ReadPageFromTape(filePath, 0);
-    
-        // 2. Insert the page into RAM at the specified index (runIndex)
         _memoryManagerService.InsertPageIntoRAMAtGivenIndex(page!, runIndex);
-
-        // 3. Retrieve the first record from the page
         var firstRecord = _memoryManagerService.GetFirstRecordFromGivenPage(runIndex);
-    
-        // 4. Remove the first record from the page (to keep track of the next record in this page)
         _memoryManagerService.RemoveFirstRecordFromGivenPage(runIndex);
-
-        // 5. Enqueue the first record into the min-heap with its key as the priority
-        if (firstRecord != null)
-        {
-            minHeap.Enqueue(new HeapElement(firstRecord, runIndex), firstRecord.Key);
-        }
+        minHeap.Enqueue(new HeapElement(firstRecord, runIndex), firstRecord.Key);
     }
     
     private int CreateRuns(string filePath)
@@ -211,7 +178,7 @@ public class ExternalMergeSortUsingLargeBuffersService
         {
             var page = _memoryManagerService.GetLastPageFromRAM();
             _memoryManagerService.RemoveLastPageFromRAM();
-            _memoryManagerService.WritePageToTape(page, $"Disk/run_{runCounter}.bin");
+            _memoryManagerService.WritePageToTape(page, $"Disk/phase_0_run_{runCounter}.bin");
 
             pageIndex++;
         }
