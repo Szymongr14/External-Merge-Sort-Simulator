@@ -2,7 +2,6 @@ namespace MemoryPageAccessSimulator.Models;
 
 public class Page
 {
-    public int PageSizeInBytes { get; init; }
     internal LinkedList<Record> Records { get; set; } = [];
     private int MaxNumberOfRecords { get; init; }
     
@@ -36,5 +35,10 @@ public class Page
     public int GetNumberOfRecords()
     {
         return Records.Count;
+    }
+    
+    public bool IsEmpty()
+    {
+        return Records.Count == 0;
     }
 }

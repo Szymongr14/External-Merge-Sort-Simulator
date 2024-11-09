@@ -95,7 +95,7 @@ public class MemoryManagerService : IMemoryManagerService
     
     public void InsertPageIntoRAMAtGivenIndex(Page page, int index)
     {
-        _ram.Pages.Insert(index, page);
+        _ram.Pages[index] = page;
     }
     
     public void RemovePageFromRAM(int pageNumber)
@@ -161,13 +161,18 @@ public class MemoryManagerService : IMemoryManagerService
             recordIndex++;
         }
     }
+    
+    public bool PageIsEmpty(int pageNumber)
+    {
+        return _ram.Pages[pageNumber].IsEmpty();
+    }
 
     public bool RAMIsEmpty()
     {
         return _ram.Pages.Count == 0;
     }
 
-    private void InitializeEmptyPagesInRAM()
+    public void InitializeEmptyPagesInRAM()
     {
         for (var i = 0; i < _ram.MaxNumberOfPages; i++)
         {
@@ -194,5 +199,10 @@ public class MemoryManagerService : IMemoryManagerService
     public (int totalReads, int totalWrites) GetTotalReadsAndWrites()
     {
         return (PageIOStatistics.TotalReads, PageIOStatistics.TotalWrites);
+    }
+    
+    public void ClearPage(int pageNumber)
+    {
+        _ram.Pages[pageNumber].ClearPage();
     }
 }

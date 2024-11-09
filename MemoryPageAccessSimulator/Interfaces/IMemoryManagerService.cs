@@ -24,4 +24,7 @@ public interface IMemoryManagerService
     public void InsertPageIntoRAMAtGivenIndex(Page page, int index);
     public void ClearRAMPages();
     public void MoveRecordToPage(int pageNumber, Record record);
+    public bool PageIsEmpty(int pageNumber);
+    public void ClearPage(int pageNumber);
+    public void InitializeEmptyPagesInRAM();
 }
