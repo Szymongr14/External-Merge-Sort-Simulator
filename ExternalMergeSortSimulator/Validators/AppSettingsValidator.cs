@@ -14,11 +14,6 @@ public class AppSettingsValidator : AbstractValidator<AppSettings>
         RuleFor(x => x.RAMSizeInNumberOfPages)
             .NotEmpty().GreaterThan(0).WithMessage("RAMSizeInNumberOfPages must be greater than 0.");
 
-        RuleFor(x => x.InternalSortingMethod)
-            .NotEmpty().WithMessage("InternalSortingMethod is required.")
-            .Must(value => value is "QuickSort" or "MergeSort")
-            .WithMessage("InternalSortingMethod must be either 'QuickSort' or 'MergeSort'.");
-
         RuleFor(x => x.DataSource)
             .NotEmpty().WithMessage("DataSource is required.")
             .Must(value => new[] { "GenerateRandomly", "ProvideManually", "LoadFromFile" }.Contains(value))
