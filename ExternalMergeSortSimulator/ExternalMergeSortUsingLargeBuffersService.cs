@@ -33,10 +33,11 @@ public class ExternalMergeSortUsingLargeBuffersService
         ExecuteMergeStage(numberOfCreatedRuns);
     }
 
-    private void ExecuteMergeStage(int numberOfRunsToSortInFirstPhase)
+    private void ExecuteMergeStage(int numberOfRunsToMergeInFirstPhase)
     {
+        _logger.LogInformation("Merge stage has started... {numberOfRunsToMerge} runs need be to merged", numberOfRunsToMergeInFirstPhase);
         var phaseCounter = 0;
-        var numberOfRunsToMergeInCurrentPhase = numberOfRunsToSortInFirstPhase;
+        var numberOfRunsToMergeInCurrentPhase = numberOfRunsToMergeInFirstPhase;
 
         while (numberOfRunsToMergeInCurrentPhase > 1)
         {
@@ -55,6 +56,7 @@ public class ExternalMergeSortUsingLargeBuffersService
                 MergeBatch(phaseCounter, mergeMinHeap, outputFilePath, currentOffsets, maxOffsets);
             }
 
+            PrintOutputs(phaseCounter, outputCounterInCurrentPhase);
             DeletePreviousPhaseFiles(phaseCounter, numberOfRunsToMergeInCurrentPhase);
 
             phaseCounter++;
@@ -147,6 +149,38 @@ public class ExternalMergeSortUsingLargeBuffersService
         {
             var inputFilePath = $"{DiskDirPath}/phase_{phaseCounter}_run_{i}.bin";
             File.Delete(inputFilePath);
+        }
+    }
+    
+    private void PrintOutputs(int phaseCounter, int outputCounter)
+    {
+        if (_appSettings.LogLevel != "Detailed") return;
+       Console.WriteLine($"Phase {phaseCounter + 1} outputs:");
+        for (var i = 0; i < outputCounter; i++)
+        {
+            Console.WriteLine($"Output {i}:");
+            var filePath = $"{DiskDirPath}/phase_{phaseCounter + 1}_run_{i}.bin";
+            using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            using var reader = new BinaryReader(fileStream);
+            var records = new List<Record>();
+            while (fileStream.Position < fileStream.Length)
+            {
+                var x = reader.ReadDouble();
+                var y = reader.ReadDouble();
+                var key = reader.ReadDouble();
+                records.Add(new Record(x, y, key));
+            }
+
+            for (var j = 0; j < records.Count; j++)
+            {
+                Console.WriteLine($"X: {records[j].X}, Y: {records[j].Y}, KEY: {records[j].Key}");
+                if (j == 10)
+                {
+                    Console.WriteLine("                            ...");
+                    Console.WriteLine($"                     ({records.Count - j} more records)");
+                    break;
+                }
+            }
         }
     }
 

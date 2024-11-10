@@ -2,7 +2,7 @@ namespace MemoryPageAccessSimulator.Models;
 
 public class Page
 {
-    internal LinkedList<Record> Records { get; set; } = [];
+    public LinkedList<Record> Records { get; set; } = [];
     private int MaxNumberOfRecords { get; init; }
     
     public Page(int maxNumberOfRecords)

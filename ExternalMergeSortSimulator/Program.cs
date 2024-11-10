@@ -37,6 +37,7 @@ public abstract class Program
         // Start the application
         var externalMergeSortService = serviceProvider.GetRequiredService<ExternalMergeSortUsingLargeBuffersService>();
         externalMergeSortService.Start();
+        logger.LogInformation("Application finished successfully. Records have been sorted!");
     }
     
     private static void ConfigureServices(ServiceCollection services, AppSettings configurationModel)
