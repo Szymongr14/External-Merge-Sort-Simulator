@@ -67,10 +67,11 @@ public class MemoryManagerService : IMemoryManagerService
             writer.Write(record.Y);
             writer.Write(record.Key);
         }
+        Console.WriteLine("Write page from tape.");
         PageIOStatistics.IncrementWrite();
     }
 
-    public Page? ReadPageFromTape(string filePath, int offset)
+    public Page ReadPageFromTape(string filePath, int offset)
     {
         var page = new Page(PageSizeInNumberOfRecords);
         using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
@@ -85,6 +86,7 @@ public class MemoryManagerService : IMemoryManagerService
         }
 
         PageIOStatistics.IncrementRead();
+        Console.WriteLine("Read page from tape.");
         return page;
     }
     
@@ -147,17 +149,24 @@ public class MemoryManagerService : IMemoryManagerService
     
     public void WriteRecordsToRAM(List<Record> records)
     {
+        var requiredPages = (int)Math.Ceiling((double)records.Count / PageSizeInNumberOfRecords);
+    
+        ClearRAMPages();
+        for (var i = 0; i < requiredPages; i++)
+        {
+            _ram.Pages.Add(new Page(PageSizeInNumberOfRecords));
+        }
+
         var pageNumber = 0;
         var recordIndex = 0;
-        ClearRAMPages();
-        InitializeEmptyPagesInRAM();
         foreach (var record in records)
         {
-            if (recordIndex % PageSizeInNumberOfRecords == 0)
+            if (recordIndex > 0 && recordIndex % PageSizeInNumberOfRecords == 0)
             {
                 pageNumber++;
             }
-            _ram.Pages[pageNumber - 1].AddRecord(record);
+        
+            _ram.Pages[pageNumber].AddRecord(record);
             recordIndex++;
         }
     }

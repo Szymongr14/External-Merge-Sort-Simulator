@@ -35,7 +35,7 @@ public class ExternalMergeSortUsingLargeBuffersService
 
     private void ExecuteMergeStage(int numberOfRunsToMergeInFirstPhase)
     {
-        _logger.LogInformation("Merge stage has started... {numberOfRunsToMerge} runs need be to merged", numberOfRunsToMergeInFirstPhase);
+        _logger.LogInformation("Merge stage has started... {numberOfRunsToMerge} runs need to be merged", numberOfRunsToMergeInFirstPhase);
         var phaseCounter = 0;
         var numberOfRunsToMergeInCurrentPhase = numberOfRunsToMergeInFirstPhase;
 
@@ -48,12 +48,25 @@ public class ExternalMergeSortUsingLargeBuffersService
 
             for (var runStartIndex = 0; runStartIndex < numberOfRunsToMergeInCurrentPhase; runStartIndex += numberOfRunsInRAM)
             {
+                if (numberOfRunsToMergeInCurrentPhase - runStartIndex == 1)
+                {
+                    var leftoverRunPath = $"{DiskDirPath}/phase_{phaseCounter}_run_{runStartIndex}.bin";
+                    var renamedOutputPath = $"{DiskDirPath}/phase_{phaseCounter + 1}_run_{outputCounterInCurrentPhase++}.bin";
+                    
+                    File.Move(leftoverRunPath, renamedOutputPath, true);
+                    _logger.LogInformation("Only one run remained unmerged in phase {phaseCounter}. Renaming {leftoverRunPath} to {renamedOutputPath}.", phaseCounter, leftoverRunPath, renamedOutputPath);
+                    break;
+                }
+
                 var outputFilePath = $"{DiskDirPath}/phase_{phaseCounter + 1}_run_{outputCounterInCurrentPhase++}.bin";
                 var mergeMinHeap = InitializeHeapAndSetUpBatch(phaseCounter, runStartIndex, numberOfRunsInRAM,
                     currentOffsets, maxOffsets, numberOfRunsToMergeInCurrentPhase);
 
                 PrepareOutputPageInRAM();
                 MergeBatch(phaseCounter, mergeMinHeap, outputFilePath, currentOffsets, maxOffsets);
+                Console.WriteLine($"Output file {outputFilePath} has been created.");
+                var (totalReads, totalWrites) = _memoryManagerService.GetTotalReadsAndWrites();
+                Console.WriteLine($"total reads: {totalReads}, total writes: {totalWrites}, total I/O: {totalReads + totalWrites}");
             }
 
             PrintOutputs(phaseCounter, outputCounterInCurrentPhase);
@@ -155,7 +168,7 @@ public class ExternalMergeSortUsingLargeBuffersService
     private void PrintOutputs(int phaseCounter, int outputCounter)
     {
         if (_appSettings.LogLevel != "Detailed") return;
-       Console.WriteLine($"Phase {phaseCounter + 1} outputs:");
+       Console.WriteLine($"Phase {phaseCounter} outputs:");
         for (var i = 0; i < outputCounter; i++)
         {
             Console.WriteLine($"Output {i}:");
@@ -260,8 +273,8 @@ public class ExternalMergeSortUsingLargeBuffersService
     {
         var (currentTotalWrites, currentTotalReads) = _memoryManagerService.GetTotalReadsAndWrites();
         _logger.LogInformation(
-            "Merge stage has ended with {phaseCounter} phases. Total writes: {totalWrites}, Total reads: {totalReads}",
-            phaseCounter, currentTotalWrites, currentTotalReads);
+            "Merge stage has ended with {phaseCounter} phases. Total writes: {totalWrites}, Total reads: {totalReads}. Total I/O operations: {totalIO}",
+            phaseCounter, currentTotalWrites, currentTotalReads, currentTotalWrites + currentTotalReads);
     }
 
     private void PrintRun(int runNumber)
