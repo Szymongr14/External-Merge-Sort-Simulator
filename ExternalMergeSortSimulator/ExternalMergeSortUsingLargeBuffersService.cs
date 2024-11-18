@@ -35,6 +35,7 @@ public class ExternalMergeSortUsingLargeBuffersService
 
     private void ExecuteMergeStage(int numberOfRunsToMergeInFirstPhase)
     {
+        var (totalWritesBeforeMerge, totalReadsBeforeMerge) = _memoryManagerService.GetTotalReadsAndWrites();
         _logger.LogInformation("Merge stage has started... {numberOfRunsToMerge} runs need to be merged", numberOfRunsToMergeInFirstPhase);
         var phaseCounter = 0;
         var numberOfRunsToMergeInCurrentPhase = numberOfRunsToMergeInFirstPhase;
@@ -76,7 +77,7 @@ public class ExternalMergeSortUsingLargeBuffersService
             numberOfRunsToMergeInCurrentPhase = outputCounterInCurrentPhase;
         }
 
-        LogMergeStageSummary(phaseCounter);
+        LogMergeStageSummary(phaseCounter, totalWritesBeforeMerge, totalReadsBeforeMerge);
     }
 
     private PriorityQueue<HeapElement, double> InitializeHeapAndSetUpBatch(int phaseCounter, int runStartIndex,
@@ -265,16 +266,16 @@ public class ExternalMergeSortUsingLargeBuffersService
     {
         var (currentTotalWrites, currentTotalReads) = _memoryManagerService.GetTotalReadsAndWrites();
         _logger.LogInformation(
-            "Initial Run Generation phase has ended... {runCounter} runs were created and sorted! Total writes: {totalWrites}, Total reads: {totalReads}",
-            runCounter, currentTotalWrites, currentTotalReads);
+            "Initial Run Generation phase has ended... {runCounter} runs were created and sorted! Total I/O after initial distribution: {totalIO}",
+            runCounter, currentTotalWrites + currentTotalReads);
     }
     
-    private void LogMergeStageSummary(int phaseCounter)
+    private void LogMergeStageSummary(int phaseCounter, int totalWritesBeforeMerge, int totalReadsBeforeMerge)
     {
         var (currentTotalWrites, currentTotalReads) = _memoryManagerService.GetTotalReadsAndWrites();
         _logger.LogInformation(
-            "Merge stage has ended with {phaseCounter} phases. Total writes: {totalWrites}, Total reads: {totalReads}. Total I/O operations: {totalIO}",
-            phaseCounter, currentTotalWrites, currentTotalReads, currentTotalWrites + currentTotalReads);
+            "Merge stage has ended with {phaseCounter} phases. Total I/O in merge stage: {mergeI/O}, Total I/O operations: {totalIO}",
+            phaseCounter, (currentTotalWrites-totalWritesBeforeMerge) + (currentTotalReads - totalWritesBeforeMerge), currentTotalWrites + currentTotalReads);
     }
 
     private void PrintRun(int runNumber)

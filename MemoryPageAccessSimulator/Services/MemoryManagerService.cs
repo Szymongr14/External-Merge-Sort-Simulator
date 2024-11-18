@@ -67,7 +67,6 @@ public class MemoryManagerService : IMemoryManagerService
             writer.Write(record.Y);
             writer.Write(record.Key);
         }
-        Console.WriteLine("Write page from tape.");
         PageIOStatistics.IncrementWrite();
     }
 
@@ -86,7 +85,6 @@ public class MemoryManagerService : IMemoryManagerService
         }
 
         PageIOStatistics.IncrementRead();
-        Console.WriteLine("Read page from tape.");
         return page;
     }
     
